@@ -1,121 +1,121 @@
-## PostgresSQL
+## PostgresSQL lesson 2
 
-- SQL Structured Query Language - структурированный язык запросов
+Между таблицами есть 4 вида связей:
 
-- CRUD - Create Read Update Delete
+1. One to many - один ко многим, связь через ссылочный ключ. Одна категория может быть у нескольких продуктов.
 
-```sql
-CREATE USER
-  dmitrii_k
-WITH
-  PASSWORD 'qwerty007';
-```
+2. Many to one - та же связь, но с другой стороны. Например у продукта есть ссылка на категорию и у другого продукта может быть ссылка на эту категорию.
 
-создание нового пользователя с паролем
+3. Many to many - связь через промежуточную таблицу, в которой одна новая запись - одна новая связь (используем если хотим связать, например несколько книжек с несколькими категориями)
 
-
-```sql
-CREATE DATABASE
-  students_postgres OWNER dmitrii_k;
-```
-
-создание новой базы данных
+4. One to one - один к одному, уникальная связь, редкая в применении - чаще из соображений безопасности (например с паролями)
 
 ```sql
 CREATE TABLE
-  student (
+  category (id serial PRIMARY KEY, title varchar(80));
+
+CREATE TABLE
+  product (
     id serial PRIMARY KEY,
-    name varchar(80),
-    age integer,
-    hobby varchar(80)
+    title varchar(80),
+    price integer,
+    category_id integer REFERENCES category(id)
   );
 ```
 
-создание новой таблицы
+Создание связанных через ссылочные ключи таблиц.
 
 ```sql
-INSERT INTO
-  student (name, age, hobby)
+ INSERT INTO
+  category (title)
 VALUES
-  ('Alla', 60, 'art'),
-	('Vitan', 23, 'sport fencing'),
-	('Rostislav', 20, 'boxing');
+  ('fruits'),
+  ('food'),
+  ('clothes'),
+  ('shoes');
+
+INSERT INTO
+  product (title, price, category_id)
+VALUES
+  ('orange', 1, 1),
+  ('nike air max', 300, 4),
+  ('olives', 2, 2),
+  ('milka chocolate bar', 3, 2),
+  ('Red t-shirt', 15, 3),
+  ('dragon fruit', 10, 1);
 ```
 
-добавление новых записей в таблицу
-в скобках вы перечисляете поля в том же порядке, в котором будете вводить значение. тип serial используемый для id приходит сам с авто инкрементом после каждой новой записи.
+Заполняем значениями связанные таблицы. Начинаем с той таблицы, на которую идет ссылка, чтобы знать информацию об id - ведь связь будет по ним;
 
 ```sql
 SELECT
-  hobby,
-  name
+  *
 FROM
-  student;
+  product
+  JOIN category ON category.id = product.category_id;
 ```
 
-вывод данных по выборочным полям из нужной таблицы. порядок и кол-во полей влияет на вывод
-
+Забираем данные из связанных таблиц. Для этого мы связываем из через операторы JOIN и ON явно указывая по каким полям в таблицах происходит связь.
 
 ```sql
 SELECT
-  hobby,
-  name
+  product.title, product.price, category.title
 FROM
-  student
-WHERE
-	age > 21;
+  product
+  JOIN category ON category.id = product.category_id;
 ```
 
-вывод данных по условию
-
-```sql
-DELETE FROM student;
-```
-
-удаление всех данных из таблицы;
-
-```sql
-DELETE FROM
-  student
-WHERE
-  id = 10;
-```
-
-удаление данных по id;
-
-
-```sql
-DELETE FROM
-  student
-WHERE
-  age = 23
-  OR hobby = 'art';
-```
-
-удаление данных из таблицы по условию
-
+Чтобы забрать данные по выборочным полям мы явно указываем из какой таблицы они к нам приходят. Синтаксис похож на обращение к объекту по ключу.
 
 ```sql
 SELECT
-  name,
-  hobby,
-  age
+  product.id, product.title AS product_title, product.price, category.title AS category
 FROM
-  student
-ORDER BY
-  age DESC;
+  product
+  JOIN category ON category.id = product.category_id;
 ```
 
-выдача данных с сортировкой в обратном порядке
-
+Если мы хотим изменить названия поля при выдаче можно воспользоваться оператором AS (псевдоним) и указать новое значение для поля, например, если оно дублируется.
 
 ```sql
-UPDATE
-  student
-SET
-  hobby = 'books reading'
-WHERE
-  name = 'Tatiana';
+CREATE TABLE
+  book (
+    id serial PRIMARY KEY,
+    title varchar(80),
+    year integer
+  );
+
+CREATE TABLE
+  genre (id serial PRIMARY KEY, title varchar(80));
+
+CREATE TABLE
+  book_genre (
+    book_id integer REFERENCES book (id),
+    genre_id integer REFERENCES genre (id)
+  );
 ```
 
-обновление данных по условию
+Создание таблиц со связью many-to-many через техническую таблицу с ссылочными ключами.
+
+```sql
+SELECT
+  *
+FROM
+  book
+  JOIN book_genre ON book.id = book_genre.book_id
+  JOIN genre ON book_genre.genre_id = genre.id;
+```
+
+Вывод всех данных через промежуточную таблицу без группировки.
+
+```sql
+SELECT
+  book.title, book.year, genre.title as genre
+FROM
+  book
+  JOIN book_genre ON book.id = book_genre.book_id
+  JOIN genre ON book_genre.genre_id = genre.id
+WHERE
+  book.id = 3;
+```
+Вывод данным по условию с выбором нужных полей.
